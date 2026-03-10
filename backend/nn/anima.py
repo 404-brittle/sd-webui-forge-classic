@@ -581,6 +581,19 @@ class MiniTrainDIT(nn.Module):
 
     def forward(self, x: torch.Tensor, timesteps: torch.Tensor, context: torch.Tensor, fps: Optional[torch.Tensor] = None, padding_mask: Optional[torch.Tensor] = None, **kwargs):
         orig_shape = list(x.shape)
+
+        # Reference latents: concat along temporal dim (Flux2-style)
+        ref_latents = kwargs.get('ref_latents', None)
+        if ref_latents is not None:
+            if not isinstance(ref_latents, list):
+                ref_latents = [ref_latents]
+            for ref in ref_latents:
+                if ref.ndim == 4:
+                    ref = ref.unsqueeze(2)
+                if x.ndim == 4:
+                    x = x.unsqueeze(2)
+                x = torch.cat([x, ref.to(dtype=x.dtype, device=x.device)], dim=2)
+
         x = pad_to_patch_size(x, (self.patch_temporal, self.patch_spatial, self.patch_spatial))
         x_B_C_T_H_W = x
         timesteps_B_T = timesteps
